@@ -8,6 +8,7 @@ import 'package:chart_app/src/interop/js_interop.dart';
 import 'package:chart_app/src/models/chart_config.dart';
 import 'package:chart_app/src/models/chart_feed.dart';
 import 'package:chart_app/src/models/drawing_tool.dart';
+import 'package:chart_app/src/misc/quill_chart_icons.dart';
 import 'package:chart_app/src/models/indicators.dart';
 import 'package:chart_app/src/series/blink_tick_indicator.dart';
 import 'package:chart_app/src/series/current_tick_indicator.dart';
@@ -266,7 +267,14 @@ class DerivChartWrapperState extends State<DerivChartWrapper> {
                                 CurrentTickIndicator(
                                   feedModel.ticks.last,
                                   id: 'last_tick_indicator',
-                                  style: configModel.theme.currentSpotStyle
+                                  // Only the current spot takes the emphasised
+                                  // variant: the blinking dot and the interval
+                                  // countdown below share `currentSpotStyle`
+                                  // but paint no price of their own.
+                                  style: (configModel.shouldEmphasizeLastDigit
+                                          ? configModel.theme
+                                              .currentSpotWithEmphasizedLastDigitStyle
+                                          : configModel.theme.currentSpotStyle)
                                       .copyWith(
                                     labelPadding: 8,
                                     hasArrow: false,
@@ -327,6 +335,10 @@ class DerivChartWrapperState extends State<DerivChartWrapper> {
                           : drawingToolModel.drawingToolsRepo,
                       drawingTools: drawingToolModel.drawingTools,
                       indicatorsRepo: indicatorsModel.indicatorsRepo,
+                      // Without this the on-chart indicator labels fall back to
+                      // Material glyphs, which don't match the quill icons the
+                      // surrounding chart UI uses.
+                      indicatorLabelIcons: QuillChartIcons.labelIcons,
                       dataFitEnabled: configModel.startWithDataFitMode,
                       useDrawingToolsV2: true,
                       interactiveLayerBehaviour:

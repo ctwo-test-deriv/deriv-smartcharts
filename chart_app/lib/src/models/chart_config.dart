@@ -1,15 +1,27 @@
 import 'dart:js_interop';
+import 'package:chart_app/src/misc/web_chart_themes.dart';
 import 'dart:js_interop_unsafe';
 
 import 'package:chart_app/src/helpers/color.dart';
 import 'package:deriv_chart/core_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:chart_app/src/interop/js_interop.dart';
+import 'package:web/web.dart' as web;
 
 /// State and methods of chart web adapter config.
 class ChartConfigModel extends ChangeNotifier {
   /// Initialize
-  ChartConfigModel();
+  ChartConfigModel() {
+    // The JS wrapper exposes the host's current theme on
+    // `window.flutterChartTheme` before the engine boots. Seeding it here
+    // makes the engine's very first frame match the host theme instead of
+    // flashing the light default until updateTheme arrives via interop.
+    final Object? initialTheme =
+        web.window.getProperty('flutterChartTheme'.toJS)?.dartify();
+    if (initialTheme == 'dark') {
+      theme = WebChartDarkTheme();
+    }
+  }
 
   /// Style of the chart
   ChartStyle style = ChartStyle.line;
@@ -18,7 +30,7 @@ class ChartConfigModel extends ChangeNotifier {
   int? granularity;
 
   /// Theme of the chart
-  ChartTheme theme = ChartDefaultLightTheme();
+  ChartTheme theme = WebChartLightTheme();
 
   /// Markers
   List<MarkerGroup> markerGroupList = <MarkerGroup>[];
@@ -61,6 +73,13 @@ class ChartConfigModel extends ChangeNotifier {
 
   /// Whether smooth chart animations are enabled.
   bool isSmoothChartEnabled = true;
+
+  /// Whether the current spot's label should emphasise the quote's last digit.
+  ///
+  /// Digit contracts (Matches/Differs, Over/Under, Even/Odd) are decided by
+  /// that digit alone, so the host turns this on while one of them is on
+  /// screen and off again otherwise.
+  bool shouldEmphasizeLastDigit = false;
 
   /// Show the time interval
   bool showTimeInterval = false;
@@ -160,7 +179,14 @@ class ChartConfigModel extends ChangeNotifier {
   /// To update the theme of the chart
   void updateTheme(String _theme) {
     theme =
-        _theme == 'dark' ? ChartDefaultDarkTheme() : ChartDefaultLightTheme();
+        _theme == 'dark' ? WebChartDarkTheme() : WebChartLightTheme();
+    notifyListeners();
+  }
+
+  /// To update whether the current spot's last digit is emphasised
+  // ignore: avoid_positional_boolean_parameters
+  void updateLastDigitEmphasis(bool _shouldEmphasizeLastDigit) {
+    shouldEmphasizeLastDigit = _shouldEmphasizeLastDigit;
     notifyListeners();
   }
 
@@ -208,6 +234,7 @@ class ChartConfigModel extends ChangeNotifier {
     yAxisMargin = payload.yAxisMargin;
     symbol = payload.symbol ?? '';
     isSmoothChartEnabled = payload.isSmoothChartEnabled ?? true;
+    shouldEmphasizeLastDigit = payload.shouldEmphasizeLastDigit ?? false;
 
     if (payload.chartType != null && payload.chartType!.isNotEmpty) {
       style = ChartStyle.values.byName(payload.chartType!);
@@ -215,8 +242,8 @@ class ChartConfigModel extends ChangeNotifier {
 
     if (payload.theme != null && payload.theme!.isNotEmpty) {
       theme = payload.theme == 'dark'
-          ? ChartDefaultDarkTheme()
-          : ChartDefaultLightTheme();
+          ? WebChartDarkTheme()
+          : WebChartLightTheme();
     }
 
     notifyListeners();

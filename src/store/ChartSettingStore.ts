@@ -2,9 +2,8 @@ import { observable, action, when, reaction, makeObservable } from 'mobx';
 import { TLanguage, TSettings } from 'src/types';
 import MainStore from '.';
 import Context from '../components/ui/Context';
-import { Languages, STATE, Intervals } from '../Constant';
+import { Languages } from '../Constant';
 import { LogActions, LogCategories, logEvent } from '../utils/ga';
-import { getTimeIntervalName } from '../utils';
 import MenuStore from './MenuStore';
 
 export default class ChartSettingStore {
@@ -18,7 +17,8 @@ export default class ChartSettingStore {
     historical = false;
     isAutoScale = true;
     isHighestLowestMarkerEnabled = true;
-    isSmoothChartEnabled = true;
+    // Smooth chart movement is always on; it is no longer user-configurable.
+    readonly isSmoothChartEnabled = true;
     minimumLeftBars?: number;
     whitespace?: number;
 
@@ -31,10 +31,10 @@ export default class ChartSettingStore {
             historical: observable,
             isAutoScale: observable,
             isHighestLowestMarkerEnabled: observable,
-            isSmoothChartEnabled: observable,
             minimumLeftBars: observable,
             updateActiveLanguage: action.bound,
             setLanguage: action.bound,
+            setInitialTheme: action.bound,
             setTheme: action.bound,
             setPosition: action.bound,
             showCountdown: action.bound,
@@ -42,25 +42,29 @@ export default class ChartSettingStore {
             setAutoScale: action.bound,
             setWhiteSpace: action.bound,
             toggleHighestLowestMarker: action.bound,
-            toggleSmoothChart: action.bound,
             whitespace: observable,
         });
 
         this.defaultLanguage = this.languages[0];
         this.mainStore = mainStore;
         this.menuStore = new MenuStore(mainStore, { route: 'setting' });
-        
-        // Load smooth chart setting from localStorage
-        const savedSmoothChart = localStorage.getItem('is_smooth_chart_enabled');
-        if (savedSmoothChart !== null) {
-            this.isSmoothChartEnabled = savedSmoothChart === 'true';
-        }
-        // below reaction is updating the symbols and those elements that are not updating automatically on language change.
+
+        // Language is a JS-side concern only: it changes translated strings (React
+        // re-renders on the `language` observable) and the symbol's localised
+        // display_name. The Flutter engine is locale-agnostic — its newChart payload
+        // carries no locale field and chart_app has no intl/DateFormat usage — so
+        // there is nothing in it to rebuild.
+        //
+        // This used to call changeSymbol(..., isLanguageChanged=true), which forgot
+        // the tick stream, refetched 1000 ticks and tore the chart down to re-apply
+        // an identical config. That was the second half of a two-step that no longer
+        // exists: it paired with activeSymbols.retrieveActiveSymbols(true), which
+        // re-fetched localised symbols and was removed when activeSymbols moved to
+        // the host. All that remains necessary is re-reading the symbol object.
         reaction(
             () => (this?.language as TLanguage)?.key,
             () => {
-                // activeSymbols was removed from chart, directly call changeSymbol with isLanguageChanged=true
-                mainStore?.chart?.changeSymbol?.(mainStore.state.symbol, mainStore.state.granularity, true);
+                mainStore?.chart?.refreshCurrentActiveSymbol?.();
             }
         );
         when(
@@ -90,7 +94,6 @@ export default class ChartSettingStore {
             position,
             isAutoScale,
             isHighestLowestMarkerEnabled,
-            isSmoothChartEnabled,
             theme,
             activeLanguages,
             whitespace,
@@ -126,9 +129,6 @@ export default class ChartSettingStore {
         }
         if (isHighestLowestMarkerEnabled !== undefined) {
             this.toggleHighestLowestMarker(isHighestLowestMarkerEnabled);
-        }
-        if (isSmoothChartEnabled !== undefined) {
-            this.toggleSmoothChart(isSmoothChartEnabled);
         }
         this.setWhiteSpace(whitespace);
     }
@@ -182,40 +182,46 @@ export default class ChartSettingStore {
         }
         if (updatedLanguage !== this.mainStore.chart.currentLanguage) {
             this.mainStore.chart.currentLanguage = updatedLanguage;
-            
-            // Save the layout to ensure drawing tools are preserved
-            this.mainStore.state.saveLayout();
-            
-            // Force reload of drawing tools from Flutter side
-            // This triggers the _loadSavedDrawingTools method in drawing_tool.dart
-            setTimeout(() => {
-                // First get the current symbol
-                const symbol = this.mainStore.chart.currentActiveSymbol?.symbol;
-                if (symbol) {
-                    // Create a new chart payload to trigger the drawing tool reload
-                    window.flutterChart?.app.newChart({
-                        symbol,
-                        granularity: this.mainStore.chartAdapter.getGranularityInMs(),
-                        chartType: this.mainStore.state.chartType,
-                        isLive: this.mainStore.chart.isLive || false,
-                        startWithDataFitMode: this.mainStore.chartAdapter.isDataFitModeEnabled,
-                        theme: this.theme,
-                        msPerPx: this.mainStore.chartAdapter.msPerPx,
-                        pipSize: this.mainStore.chart.pip,
-                        isMobile: this.mainStore.chart.isMobile || false,
-                        isSmoothChartEnabled: this.isSmoothChartEnabled,
-                        yAxisMargin: this.mainStore.state.yAxisMargin,
-                    });
-                }
-            }, 100);
+            // Nothing else to do: the engine is not rebuilt on a language change, so
+            // its drawing tools are never wiped and need no save/reload cycle. The
+            // previous workaround here fired a bare `app.newChart` 100ms later to
+            // restore drawings the rebuild had destroyed — without the paired
+            // `feed.onTickHistory` the engine expects, so it reset the Dart feed
+            // model and left nothing to repopulate it.
         }
         this.saveSetting();
+    }
+    /**
+     * Seeds the theme at store construction, before the first render commits,
+     * so the chart never paints its default light theme for a frame when the
+     * host mounts it in dark mode. Unlike setTheme, this must not trigger the
+     * settings-save/GA side effects — the value comes from the host, not the user.
+     */
+    setInitialTheme(theme?: string) {
+        // On a warm remount (e.g. mobile Trade -> Menu -> Trade) the JS store is
+        // rebuilt with the default 'light' theme, but the Flutter engine and the
+        // window.flutterChartTheme global survive. Resolve the real target from
+        // the host prop first, then the last-known global, then the store default,
+        // so we never regress a dark chart to light just because the fresh store
+        // hasn't been told the current theme yet.
+        const resolvedTheme = theme || window.flutterChartTheme || this.theme;
+        this.theme = resolvedTheme;
+        // A cold engine reads this global at bootstrap so its very first frame
+        // is painted with the correct theme instead of the Dart light default.
+        window.flutterChartTheme = resolvedTheme;
+        // Always push to the (possibly warm) engine, without an equality guard:
+        // it retains the theme from its previous mount, and setTheme() will later
+        // early-return on an unchanged value. initContext runs during render,
+        // before onMount reattaches the canvas, so the engine repaints the correct
+        // theme before it becomes visible again — preventing the wrong-theme flash.
+        this.mainStore.chartAdapter.updateTheme(resolvedTheme);
     }
     setTheme(theme: string) {
         if (this.theme === theme) {
             return;
         }
         this.theme = theme;
+        window.flutterChartTheme = theme;
 
         this.mainStore.drawTools.updateTheme();
 
@@ -305,26 +311,5 @@ export default class ChartSettingStore {
             ` ${value ? 'Show' : 'Hide'} HighestLowestMarker.`
         );
         this.saveSetting();
-    }
-    toggleSmoothChart(value: boolean) {
-        if (this.isSmoothChartEnabled === value) {
-            return;
-        }
-        this.isSmoothChartEnabled = value;
-        
-        // Save to localStorage
-        localStorage.setItem('is_smooth_chart_enabled', value.toString());
-        
-        logEvent(LogCategories.ChartControl, LogActions.ChartSetting, ` ${value ? 'Enable' : 'Disable'} Smooth Chart.`);
-        const chart_type = this.mainStore.chartType.type;
-        const state = this.mainStore.state;
-        this.mainStore.state.stateChange(STATE.CHART_SWITCH_TOGGLE, {
-            enable_smooth_chart: value ? 'enable' : 'disable',
-            chart_type_name: chart_type.id === 'colored_bar' ? chart_type.text : chart_type.text.toLowerCase(),
-            time_interval_name: getTimeIntervalName(state.granularity, Intervals),
-        });
-        this.saveSetting();
-        // Refresh the chart to apply the new smooth chart setting
-        this.mainStore.chart.refreshChart();
     }
 }

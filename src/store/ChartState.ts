@@ -51,7 +51,6 @@ type TStateChangeOption = {
     drawing_tool_name?: string;
     pxthickness?: string;
     color_name?: string;
-    enable_smooth_chart?: string;
 };
 
 class ChartState {
@@ -75,11 +74,15 @@ class ChartState {
     stateChangeListener?: (state: string, option?: TStateChangeOption) => void;
     settings?: TSettings;
     showLastDigitStats = false;
+    shouldEmphasizeLastDigit = false;
     scrollToEpoch?: number | null;
     clearChart?: () => void;
     isChartClosed = false;
     shouldMinimiseLastDigits = false;
     allowTickChartTypeOnly?: boolean;
+    allowedChartTypes?: string[];
+    allowedGranularities?: TGranularity[];
+    restrictionMessage?: string;
     isStaticChart? = false;
     shouldFetchTradingTimes = true;
     shouldGetQuotes = true;
@@ -133,7 +136,13 @@ class ChartState {
             stateChangeListener: observable,
             settings: observable,
             showLastDigitStats: observable,
+            shouldEmphasizeLastDigit: observable,
             allowTickChartTypeOnly: observable,
+            allowedChartTypes: observable,
+            allowedGranularities: observable,
+            restrictionMessage: observable,
+            isChartTypeAllowed: false,
+            isGranularityAllowed: false,
             scrollToEpoch: observable,
             clearChart: observable,
             isChartClosed: observable,
@@ -160,7 +169,7 @@ class ChartState {
         this.mainStore = mainStore;
         this.chartStore = mainStore.chart;
         when(() => !!this.context, this.onContextReady);
-        
+
         // Save layout before page unload (refresh)
         window.addEventListener('beforeunload', () => {
             this.saveLayout();
@@ -179,6 +188,19 @@ class ChartState {
     onContextReady = () => {
         this.granularity = this.chartStore.granularity;
     };
+
+    /**
+     * Host-driven allow-lists. An absent or empty list means "no restriction", so
+     * consumers that never pass these props are unaffected.
+     */
+    isChartTypeAllowed(chartTypeId: string) {
+        // indexOf rather than includes: the project targets ES5 with no explicit `lib`.
+        return !this.allowedChartTypes?.length || this.allowedChartTypes.indexOf(chartTypeId) !== -1;
+    }
+
+    isGranularityAllowed(granularity: TGranularity) {
+        return !this.allowedGranularities?.length || this.allowedGranularities.indexOf(granularity) !== -1;
+    }
 
     updateProps({
         networkStatus,
@@ -206,7 +228,11 @@ class ChartState {
         allTicks = [],
         contractInfo = {},
         showLastDigitStats = false,
+        shouldEmphasizeLastDigit = false,
         allowTickChartTypeOnly = false,
+        allowedChartTypes,
+        allowedGranularities,
+        restrictionMessage,
         startEpoch,
         symbol,
         zoom,
@@ -250,6 +276,11 @@ class ChartState {
                 for (const symbolObj of this.mainStore.chart.processedSymbols) {
                     this.mainStore.chart.symbolMap[symbolObj.symbol] = symbolObj;
                 }
+                // Point currentActiveSymbol at the freshly processed object so a
+                // re-localised display_name reaches the title. The host often pushes
+                // re-localised activeSymbols slightly after a language switch, and
+                // without this the title would keep the old language's name.
+                this.mainStore.chart.refreshCurrentActiveSymbol();
             }
         }
 
@@ -277,6 +308,9 @@ class ChartState {
         this.shouldFetchTradingTimes = shouldFetchTradingTimes;
         this.shouldGetQuotes = shouldGetQuotes;
         this.allowTickChartTypeOnly = allowTickChartTypeOnly;
+        this.allowedChartTypes = allowedChartTypes;
+        this.allowedGranularities = allowedGranularities;
+        this.restrictionMessage = restrictionMessage;
         this.allTicks = allTicks;
         this.contractInfo = contractInfo;
         this.showLastDigitStats = showLastDigitStats;
@@ -425,6 +459,14 @@ class ChartState {
         if (isLive !== null && isLive !== undefined && this.mainStore.chart.isLive !== isLive) {
             this.mainStore.chart.isLive = isLive;
             this.mainStore.chartAdapter.updateLiveStatus(isLive);
+        }
+
+        // Pushed on change rather than only through `newChart`, so switching
+        // between a digits trade type and any other one re-styles the existing
+        // current-spot label instead of waiting for a symbol or interval change.
+        if (this.shouldEmphasizeLastDigit !== shouldEmphasizeLastDigit) {
+            this.shouldEmphasizeLastDigit = shouldEmphasizeLastDigit;
+            this.mainStore.chartAdapter.updateLastDigitEmphasis(shouldEmphasizeLastDigit);
         }
 
         if (

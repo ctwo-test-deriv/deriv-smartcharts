@@ -13,7 +13,7 @@ dependencies:
     deriv_chart:
         git:
             url: https://github.com/deriv-com/flutter-chart.git
-            ref: master
+            ref: 6cebbc6cac187a2cce9846fd29b45b15591eaef7
     web: ^1.1.1
 
 dev_dependencies:
@@ -32,4 +32,9 @@ flutter:
               - asset: fonts/IBMPlexSans-Regular.ttf
               - asset: fonts/IBMPlexSans-Bold.ttf
                 weight: 700
+        # Seven quill glyphs for the on-chart indicator labels, built from
+        # @deriv/quill-icons by tool/generate_quill_icon_font.py.
+        - family: QuillChartIcons
+          fonts:
+              - asset: fonts/QuillChartIcons.otf
     uses-material-design: true

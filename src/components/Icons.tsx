@@ -57,7 +57,7 @@ import PositionBottom from '../../sass/icons/chart settings/setting/ic-position-
 import Back from '../../sass/icons/back/ic-back.svg';
 import DrawCursor from '../../sass/icons/pencil/ic-pencil.svg';
 import DrawTool from '../../sass/icons/common/ic-drawing-tool.svg';
-import DrawToolMobile from '../../sass/icons/common/ic-drawing-tool-mobile.svg';
+import ChartIndicators from '../../sass/icons/common/ic-chart-indicators.svg';
 
 import HelpCenter from '../../sass/icons/common/ic-help-center.svg';
 import Download from '../../sass/icons/common/ic-download.svg';
@@ -74,6 +74,15 @@ import Home from '../../sass/icons/navigation-widgets/ic-home.svg';
 import Scale from '../../sass/icons/navigation-widgets/ic-scale-full.svg';
 import Zoomin from '../../sass/icons/navigation-widgets/ic-zoomin.svg';
 import Zoomout from '../../sass/icons/navigation-widgets/ic-zoomout.svg';
+
+import ChartArea from '../../sass/icons/common/ic-chart-settings.svg';
+import EllipsisVertical from '../../sass/icons/common/ic-vertical-ellipsis.svg';
+import DrawingTools from '../../sass/icons/common/ic-chart-drawing.svg';
+import ChartDownload from '../../sass/icons/common/ic-chart-download.svg';
+import ChartCrosshairEnabled from '../../sass/icons/common/ic-chart-crosshair-enabled.svg';
+import ChartCrosshairDisabled from '../../sass/icons/common/ic-crosshair-disabled.svg';
+import ChartPlus from '../../sass/icons/common/ic-chart-plus.svg';
+import ChartMinus from '../../sass/icons/common/ic-chart-minus.svg';
 
 import TypeArea from '../../sass/icons/chart-type/ic-area.svg';
 import TypeCandle from '../../sass/icons/chart-type/ic-candle.svg';
@@ -139,24 +148,33 @@ import Vol50 from '../../sass/icons/active-symbols/volatility/50 index/ic-50-ind
 import Vol75 from '../../sass/icons/active-symbols/volatility/75 index/ic-75-index-v.svg';
 import Vol100 from '../../sass/icons/active-symbols/volatility/100 index/ic-100-index-v.svg';
 import Vol1S10 from '../../sass/icons/active-symbols/volatility/1s10 index/ic-10-1s-index.svg';
+import Vol1S15 from '../../sass/icons/active-symbols/volatility/1s15 index/ic-15-1s-index.svg';
 import Vol1S25 from '../../sass/icons/active-symbols/volatility/1s25 index/light-25(1s)index.svg';
+import Vol1S30 from '../../sass/icons/active-symbols/volatility/1s30 index/ic-30-1s-index.svg';
 import Vol1S50 from '../../sass/icons/active-symbols/volatility/1s50 index/light-50(1s) index.svg';
 import Vol1S75 from '../../sass/icons/active-symbols/volatility/1s75 index/light-75(1s) index.svg';
+import Vol1S90 from '../../sass/icons/active-symbols/volatility/1s90 index/ic-90-1s-index.svg';
 import Vol1S100 from '../../sass/icons/active-symbols/volatility/1s100 index/ic-100-1s-index.svg';
 import Vol1S150 from '../../sass/icons/active-symbols/volatility/1s150 index/ic-150-1s-index.svg';
 import Vol1S200 from '../../sass/icons/active-symbols/volatility/1s200 index/ic-200-1s-index.svg';
 import Vol1S250 from '../../sass/icons/active-symbols/volatility/1s250 index/ic-250-1s-index.svg';
 import Vol1S300 from '../../sass/icons/active-symbols/volatility/1s300 index/ic-300-1s-index.svg';
+import Crash50 from '../../sass/icons/active-symbols/volatility/crash50 index/crash50 index.svg';
+import Crash150 from '../../sass/icons/active-symbols/volatility/crash150 index/crash150 index.svg';
 import Crash300 from '../../sass/icons/active-symbols/volatility/crash300 index/crash300 index.svg';
 import Crash500 from '../../sass/icons/active-symbols/volatility/crash500 index/crash500 index.svg';
 import Crash600 from '../../sass/icons/active-symbols/volatility/crash600 index/crash600 index.svg';
 import Crash900 from '../../sass/icons/active-symbols/volatility/crash900 index/crash900 index.svg';
 import Crash1000 from '../../sass/icons/active-symbols/volatility/crash1000 index/crash1000 index.svg';
+import Boom50 from '../../sass/icons/active-symbols/volatility/boom50 index/boom50 index.svg';
+import Boom150 from '../../sass/icons/active-symbols/volatility/boom150 index/boom150 index.svg';
 import Boom300 from '../../sass/icons/active-symbols/volatility/boom300 index/boom300 index.svg';
 import Boom500 from '../../sass/icons/active-symbols/volatility/boom500 index/boom500 index.svg';
 import Boom600 from '../../sass/icons/active-symbols/volatility/boom600 index/boom600 index.svg';
 import Boom900 from '../../sass/icons/active-symbols/volatility/boom900 index/boom900 index.svg';
 import Boom1000 from '../../sass/icons/active-symbols/volatility/boom1000 index/boom1000 index.svg';
+import RangeBreak100 from '../../sass/icons/active-symbols/volatility/range break 100 index/range break 100 index.svg';
+import RangeBreak200 from '../../sass/icons/active-symbols/volatility/range break 200 index/range break 200 index.svg';
 import MarketBear from '../../sass/icons/active-symbols/volatility/bear market/ic-marketbear.svg';
 import MarketBull from '../../sass/icons/active-symbols/volatility/bull market/ic-marketbull.svg';
 import Step100 from '../../sass/icons/active-symbols/volatility/step index/step-100-index.svg';
@@ -307,7 +325,7 @@ export const DrawingCursorIcon = Wrapper(DrawCursor);
 export const ThemeLightIcon = Wrapper(ThemeLight);
 export const ThemeDarkIcon = Wrapper(ThemeDark);
 export const DrawToolIcon = Wrapper(DrawTool);
-export const DrawToolMobileIcon = Wrapper(DrawToolMobile);
+export const ChartIndicatorsIcon = Wrapper(ChartIndicators);
 export const ActiveIcon = Wrapper(Active);
 export const FullScreenIcon = Wrapper(FullScreen);
 
@@ -367,6 +385,14 @@ export const HomeIcon = Wrapper(Home);
 export const ScaleIcon = Wrapper(Scale);
 export const ZoominIcon = Wrapper(Zoomin);
 export const ZoomoutIcon = Wrapper(Zoomout);
+export const ChartAreaIcon = Wrapper(ChartArea);
+export const EllipsisVerticalIcon = Wrapper(EllipsisVertical);
+export const DrawingToolsIcon = Wrapper(DrawingTools);
+export const ChartDownloadIcon = Wrapper(ChartDownload);
+export const ChartCrosshairEnabledIcon = Wrapper(ChartCrosshairEnabled);
+export const ChartCrosshairDisabledIcon = Wrapper(ChartCrosshairDisabled);
+export const ChartPlusIcon = Wrapper(ChartPlus);
+export const ChartMinusIcon = Wrapper(ChartMinus);
 
 export const LanguageIcon = Wrapper(Language);
 export const ThemeIcon = Wrapper(Theme);
@@ -530,24 +556,33 @@ export const ItemIconMap = {
     R_75: Wrapper(Vol75),
     R_100: Wrapper(Vol100),
     '1HZ10V': Wrapper(Vol1S10),
+    '1HZ15V': Wrapper(Vol1S15),
     '1HZ25V': Wrapper(Vol1S25),
+    '1HZ30V': Wrapper(Vol1S30),
     '1HZ50V': Wrapper(Vol1S50),
     '1HZ75V': Wrapper(Vol1S75),
+    '1HZ90V': Wrapper(Vol1S90),
     '1HZ100V': Wrapper(Vol1S100),
     '1HZ150V': Wrapper(Vol1S150),
     '1HZ200V': Wrapper(Vol1S200),
     '1HZ250V': Wrapper(Vol1S250),
     '1HZ300V': Wrapper(Vol1S300),
+    BOOM50: Wrapper(Boom50),
+    BOOM150N: Wrapper(Boom150),
     BOOM300N: Wrapper(Boom300),
     BOOM500: Wrapper(Boom500),
     BOOM600: Wrapper(Boom600),
     BOOM900: Wrapper(Boom900),
     BOOM1000: Wrapper(Boom1000),
+    CRASH50: Wrapper(Crash50),
+    CRASH150N: Wrapper(Crash150),
     CRASH300N: Wrapper(Crash300),
     CRASH500: Wrapper(Crash500),
     CRASH600: Wrapper(Crash600),
     CRASH900: Wrapper(Crash900),
     CRASH1000: Wrapper(Crash1000),
+    RB100: Wrapper(RangeBreak100),
+    RB200: Wrapper(RangeBreak200),
     RDBEAR: Wrapper(MarketBear),
     RDBULL: Wrapper(MarketBull),
     stpRNG: Wrapper(Step100),

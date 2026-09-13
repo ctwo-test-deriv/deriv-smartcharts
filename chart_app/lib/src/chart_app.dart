@@ -18,7 +18,20 @@ class ChartApp {
     this.feedModel,
     this.indicatorsModel,
     this.drawingToolModel,
-  );
+  ) {
+    // [yAxisWidth] and [currentTickWidth] are derived from the config's theme,
+    // pip size and last-digit emphasis, but [calculateTickWidth] is otherwise
+    // only reached from the `ValueListenableBuilder` on
+    // `feedModel.feedLoadedNotifier`, which flips on feed reloads alone.
+    // A config-only change — `updateTheme`, `updateLastDigitEmphasis` —
+    // repaints the chart through [ChartConfigModel]'s own listeners further
+    // down the tree without rebuilding that builder, so both widths would
+    // otherwise keep describing the previous config until the next feed load.
+    //
+    // No matching `removeListener`: this and [configModel] are both created
+    // once in `_DerivChartWebAdapterState` and share the app's lifetime.
+    configModel.addListener(calculateTickWidth);
+  }
 
   /// ChartConfigModel
   ChartConfigModel configModel;
@@ -137,12 +150,43 @@ class ChartApp {
       return;
     }
 
-    // Contract-details charts mount with `startWithDataFitMode=true`
-    // and are wired to the empty drawing-tools repo in `deriv_chart_wrapper`,
-    // so they must never have anything render.
+    // Contract-details charts mount with `startWithDataFitMode=true` and
+    // position themselves through data-fit, so neither the viewport nudge nor
+    // the drawing-tools load below applies to them. They are also wired to the
+    // empty drawing-tools repo in `deriv_chart_wrapper`, so they must never
+    // have anything render.
     if (!payload.startWithDataFitMode) {
+      _pullViewportOntoData();
       await drawingToolModel.loadAndNotifyDrawings();
     }
+  }
+
+  /// Re-runs `scrollToLastTick` once the chart has actually consumed the new
+  /// feed, so the visible area lands on the incoming symbol's data.
+  ///
+  /// `XAxisModel` refreshes its entries and epoch bounds only from
+  /// `didUpdateWidget` — one frame after `feed.onTickHistory` lands. The
+  /// `scrollToLastTick()` that `ChartStore.newChart` fires synchronously right
+  /// after `onTickHistory` therefore still sees the *previous* symbol's
+  /// entries, so it resolves against stale data and leaves the viewport where
+  /// the outgoing symbol had it.
+  ///
+  /// For a live symbol that is invisible: both symbols' newest ticks are
+  /// ~`now`, so the parked viewport is already correct, and the next tick
+  /// re-clamps it regardless. A closed symbol has no next tick and its newest
+  /// tick can be days old, so the viewport stays parked near `now` with no data
+  /// in range — and with nothing left to trigger a repaint, the chart reads as
+  /// blank until the user scrolls or zooms.
+  ///
+  /// Callers must await [chartReady] first: it completes in the post-frame
+  /// callback of the frame that ran `didUpdateWidget`, which is the earliest
+  /// point at which this resolves against the correct entries.
+  void _pullViewportOntoData() {
+    if (feedModel.ticks.isEmpty) {
+      return;
+    }
+
+    wrappedController.scrollToLastTick();
   }
 
   /// Calculates the width of yAxis and sets the height of xAxis
@@ -164,6 +208,12 @@ class ChartApp {
         fontFeatures: <FontFeature>[FontFeature.tabularFigures()],
       ),
       configModel.pipSize,
+      // Kept in step with the label the barrier painter actually draws: an
+      // emphasised last digit is wider than the rest of the price, and the
+      // HTML price lines size themselves from this value.
+      lastDigitTextStyle: configModel.shouldEmphasizeLastDigit
+          ? configModel.theme.currentSpotLastDigitTextStyle
+          : null,
     );
   }
 
